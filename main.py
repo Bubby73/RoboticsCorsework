@@ -1,3 +1,6 @@
+import sys
+print(sys.path)
+
 import numpy as np
 import matplotlib.pyplot as plt
 import random
@@ -10,7 +13,7 @@ L0 = 0
 L1 = L2 = 0.5
 # The D-H Table is as follows:
 DH = np.array([[L0, 0, 0, theta1], [L1, 0, 0, theta2], [L2, 0, 0, 0]])
-
+ 
 # Perform the forward kinematics operation by multiplying the Transformation matrices T0_1, T1_2, T2_3
 T0_1 = np.array([[np.cos(DH[0, 3]), -np.sin(DH[0, 3]), 0, DH[0, 0]], [np.sin(DH[0, 3]), np.cos(DH[0, 3]), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
 T1_2 = np.array([[np.cos(DH[1, 3]), -np.sin(DH[1, 3]), 0, DH[1, 0]], [np.sin(DH[1, 3]), np.cos(DH[1, 3]), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
