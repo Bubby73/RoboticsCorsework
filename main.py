@@ -45,6 +45,7 @@ def forwardKinematics(DH):
     T4_5 = TransformMatrix(4)
     T5_6 = TransformMatrix(5)
     T6_T = TransformMatrix(6)
+    print(T0_1, ("\n"), T1_2, ("\n"), T2_3, ("\n"), T3_4, ("\n"), T4_5, ("\n"), T5_6, ("\n"), T6_T)
 
 
     #The Transformation matrix from the Base to the End Effector of the Robot
