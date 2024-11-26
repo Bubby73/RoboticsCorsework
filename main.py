@@ -31,27 +31,23 @@ DH = InitialiseDH(alpha3, alpha6, D2, D3, L0, L1, L2, L3, L4, L5, theta1, theta4
 
 robot = rtb.SerialLink(
     [
-        rtb.RevoluteDH(d=DH[1][0], a = DH[1][1], alpha = DH[1][2], offset = DH[1][3]),
-        rtb.PrismaticDH(d = DH[2][0], a = DH[2][1], alpha = DH[2][2], offset = DH[2][3]),
-        rtb.PrismaticDH(d = DH[3][0], a = DH[3][1], alpha = DH[3][2], offset = DH[3][3]),
-        rtb.RevoluteDH(d=DH[4][0], a = DH[4][1], alpha = DH[4][2], offset = DH[4][3]),
-        rtb.RevoluteDH(d=DH[5][0], a = DH[5][1], alpha = DH[5][2], offset = DH[5][3]),
-        rtb.RevoluteDH(d=DH[6][0], a = DH[6][1], alpha = DH[6][2], offset = DH[6][3]),
-    ]
+        rtb.RevoluteDH(d = DH[1][0], a = DH[1][1], alpha = DH[1][2], offset = DH[1][3]),
+        rtb.DHLink(d = DH[2][0], a = DH[2][1], alpha = DH[2][2], offset = DH[2][3]),
+        rtb.DHLink(d = DH[3][0], a = DH[3][1], alpha = DH[3][2], offset = DH[3][3]),
+        rtb.RevoluteDH(d = DH[4][0], a = DH[4][1], alpha = DH[4][2], offset = DH[4][3]),
+        rtb.RevoluteDH(d = DH[5][0], a = DH[5][1], alpha = DH[5][2], offset = DH[5][3]),
+        rtb.RevoluteDH(d = DH[6][0], a = DH[6][1], alpha = DH[6][2], offset = DH[6][3]),
+        rtb.RevoluteDH(d = DH[7][0], a = DH[7][1], alpha = DH[7][2], offset = DH[7][3]) # End Effector
+    ],
+    name='Robot'
 )
- 
-# Forward Kinematics Calculations
+print(robot)
 
-def forwardKinematics(DH):
+jointVariables = [theta1, D2, D3, theta4, theta5, theta6, 0]
 
-    def TransformMatrix(i):
+print('The forward Kinematics Transformation Matrix Solution from the base to the End Effector:')
+Transformation_Matrix = robot.fkine(jointVariables)
+print(Transformation_Matrix)
 
-       
-    return T0_6
-    
 
-T0_6 = forwardKinematics(DH)
-# Print out the Base to EE Transformation Matrix
-print ('\n', 'Base to End-Effector Homogeneous Transformation Matrix (T0_6):')
-print (T0_6)
 
