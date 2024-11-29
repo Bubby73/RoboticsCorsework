@@ -5,49 +5,60 @@ import spatialmath as sp
 import roboticstoolbox as rtb
 
 
-# Define the DH parameters
-alpha3 = alpha6 = np.radians(90) # Link twist angles
-D2 = 0.5
-D3 = 0
+# Link twist angles
+alpha3 = alpha6 = np.radians(90) 
+
+# Lengths and offsets
 L0 = L4 = 0
 L1 = 0.2
 L2 = L3 = 0.3
 L5 = 0.05
-theta1 = theta4 = theta5 = theta6 = np.radians(0) # Joint Angles initially set to 0
 
-def InitialiseDH(alpha3, alpha6, D2, D3, L0, L1, L2, L3, L4, L5, theta1, theta4, theta5, theta6):
+# Initial joint angles
+theta1 = theta4 = theta5 = theta6 = np.radians(0)
+
+# Prismatic joint displacements
+d2 = 0.5
+d3 = 0
+
+def InitialiseDH(alpha3, alpha6, L0, L1, L2, L3, L4, L5):
     # The D-H Table is as follows d, a, alpha, theta:
     DH = np.array([[L0, 0, 0, 0], # 0
-                    [0, 0, 0, theta1], # 1
-                    [D2, 0, 0, 0], # 2
-                    [D3, 0, alpha3, 0], # 3
-                    [L1, 0, 0, theta4], # 4
-                    [L5, L2, 0, theta5], # 5    
-                    [L3, 0, alpha6, theta6], # 6
+                    [0, 0, 0, 0], # 1
+                    [0, 0, 0, 0], # 2
+                    [0, 0, alpha3, 0], # 3
+                    [L1, 0, 0, 0], # 4
+                    [L5, L2, 0, 0], # 5    
+                    [L3, 0, alpha6, 0], # 6
                     [L4, 0, 0, 0]]) # T
     return DH
 
-DH = InitialiseDH(alpha3, alpha6, D2, D3, L0, L1, L2, L3, L4, L5, theta1, theta4, theta5, theta6)
+DH = InitialiseDH(alpha3, alpha6, L0, L1, L2, L3, L4, L5)
 
-robot = rtb.SerialLink(
-    [
-        rtb.RevoluteDH(d = DH[1][0], a = DH[1][1], alpha = DH[1][2], offset = DH[1][3]),
-        rtb.DHLink(d = DH[2][0], a = DH[2][1], alpha = DH[2][2], offset = DH[2][3]),
-        rtb.DHLink(d = DH[3][0], a = DH[3][1], alpha = DH[3][2], offset = DH[3][3]),
-        rtb.RevoluteDH(d = DH[4][0], a = DH[4][1], alpha = DH[4][2], offset = DH[4][3]),
-        rtb.RevoluteDH(d = DH[5][0], a = DH[5][1], alpha = DH[5][2], offset = DH[5][3]),
-        rtb.RevoluteDH(d = DH[6][0], a = DH[6][1], alpha = DH[6][2], offset = DH[6][3]),
-        rtb.RevoluteDH(d = DH[7][0], a = DH[7][1], alpha = DH[7][2], offset = DH[7][3]) # End Effector
-    ],
-    name='Robot'
-)
-print(robot)
+# Define D-H links (d, a, alpha, theta)
+links = [
+    rtb.RevoluteDH(d=L0, a=0, alpha=0),            # Joint 1 (Revolute)
+    rtb.PrismaticDH(theta=0, a=0, alpha=0),                 # Joint 2 (Prismatic)
+    rtb.PrismaticDH(theta=0, a=0, alpha=DH[3,2]),            # Joint 3 (Prismatic)
+    rtb.RevoluteDH(d=DH[4,0], a=0, alpha=0),            # Joint 4 (Revolute)
+    rtb.RevoluteDH(d=DH[5,0], a=L2, alpha=0),           # Joint 5 (Revolute)
+    rtb.RevoluteDH(d=DH[6,0], a=0, alpha=DH[6,2]),       # Joint 6 (Revolute)
+    rtb.RevoluteDH(d=DH[7,0], a=0, alpha=0)             # End effector (Revolute)
+]
 
-jointVariables = [theta1, D2, D3, theta4, theta5, theta6, 0]
+# Create the robot model
+robot = rtb.DHRobot(links, name="RPPRRR Robot")
 
-print('The forward Kinematics Transformation Matrix Solution from the base to the End Effector:')
-Transformation_Matrix = robot.fkine(jointVariables)
-print(Transformation_Matrix)
+# Joint configuration
+q = [theta1, d2, d3, theta4, theta5, theta6, 0]  # [theta1, d2, d3, theta4, theta5, theta6]
+
+# Forward kinematics
+T = robot.fkine(q)
+print(T)
+
+# Plot the robot's configuration
+robot.plot(q, block=True)
+
 
 
 
