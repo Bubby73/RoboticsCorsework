@@ -3,61 +3,57 @@ import matplotlib.pyplot as plt
 import random
 import spatialmath as sp
 import roboticstoolbox as rtb
+import sympy as sp
 
 
-# Link twist angles
-alpha3 = alpha6 = np.radians(90) 
+def dh_transform(a, alpha, d, theta):
+    return np.array([
+        [np.cos(theta), -np.sin(theta) * np.cos(alpha),  np.sin(theta) * np.sin(alpha), a * np.cos(theta)],
+        [np.sin(theta),  np.cos(theta) * np.cos(alpha), -np.cos(theta) * np.sin(alpha), a * np.sin(theta)],
+        [0,              np.sin(alpha),                 np.cos(alpha),                d],
+        [0,              0,                             0,                            1]
+    ])
 
-# Lengths and offsets
-L0 = L4 = 0
-L1 = 0.2
-L2 = L3 = 0.3
-L5 = 0.05
 
-# Initial joint angles
-theta1 = theta4 = theta5 = theta6 = np.radians(0)
+def forward_kinematics(joint_values, link_lengths):
+    """
+    Calculate the forward kinematics for an RPPRRR robot.
+    
+    joint_values: [theta1, d2, d3, theta4, theta5, theta6]
+    link_lengths: [L0, L1, L2, L3, L4, L5, alpha3, alpha6]
+    """
+    # Extract joint values and link lengths
+    theta1, d2, d3, theta4, theta5, theta6 = joint_values
+    L0, L1, L2, L3, L4, L5, alpha3, alpha6 = link_lengths
 
-# Prismatic joint displacements
-d2 = 0.5
-d3 = 0
+    # Define individual transformation matrices based on DH parameters
+    T01 = dh_transform(0, 0, L0, theta1)
+    T12 = dh_transform(0, 0, d2, 0)
+    T23 = dh_transform(0, 0, d3, 0)
+    T34 = dh_transform(0, alpha3, 0, theta4)
+    T45 = dh_transform(L1, 0, 0, theta5)
+    T56 = dh_transform(L2, 0, L5, 0)
+    T67 = dh_transform(L3, alpha6, 0, theta6)
+    T7T = dh_transform(L4, 0, 0, 0)
 
-def InitialiseDH(alpha3, alpha6, L0, L1, L2, L3, L4, L5):
-    # The D-H Table is as follows d, a, alpha, theta:
-    DH = np.array([[L0, 0, 0, 0], # 0
-                    [0, 0, 0, 0], # 1
-                    [0, 0, 0, 0], # 2
-                    [0, 0, alpha3, 0], # 3
-                    [L1, 0, 0, 0], # 4
-                    [L5, L2, 0, 0], # 5    
-                    [L3, 0, alpha6, 0], # 6
-                    [L4, 0, 0, 0]]) # T
-    return DH
+    # Compute the cumulative transformation from base to end-effector
+    T = T01 @ T12 @ T23 @ T34 @ T45 @ T56 @ T67 @ T7T
+    T_rounded = np.round(T, 4)
+    return T_rounded
 
-DH = InitialiseDH(alpha3, alpha6, L0, L1, L2, L3, L4, L5)
 
-# Define D-H links (d, a, alpha, theta)
-links = [
-    rtb.RevoluteDH(d=L0, a=0, alpha=0),            # Joint 1 (Revolute)
-    rtb.PrismaticDH(theta=0, a=0, alpha=0),                 # Joint 2 (Prismatic)
-    rtb.PrismaticDH(theta=0, a=0, alpha=DH[3,2]),            # Joint 3 (Prismatic)
-    rtb.RevoluteDH(d=DH[4,0], a=0, alpha=0),            # Joint 4 (Revolute)
-    rtb.RevoluteDH(d=DH[5,0], a=L2, alpha=0),           # Joint 5 (Revolute)
-    rtb.RevoluteDH(d=DH[6,0], a=0, alpha=DH[6,2]),       # Joint 6 (Revolute)
-    rtb.RevoluteDH(d=DH[7,0], a=0, alpha=0)             # End effector (Revolute)
-]
+# Example joint values (in radians for revolute joints and meters for prismatic joints)
+joint_values = [0, 0.5, 0, 0, 0, 0]
 
-# Create the robot model
-robot = rtb.DHRobot(links, name="RPPRRR Robot")
+# Example link lengths
+link_lengths = [0.1, 0.2, 0.3, 0.3, 0.1, 0.05, np.pi/2, np.pi/2]
 
-# Joint configuration
-q = [theta1, d2, d3, theta4, theta5, theta6, 0]  # [theta1, d2, d3, theta4, theta5, theta6]
+# Calculate the forward kinematics
+T_end_effector = forward_kinematics(joint_values, link_lengths)
+print("End-effector Transformation Matrix:")
+print(T_end_effector)
 
-# Forward kinematics
-T = robot.fkine(q)
-print(T)
 
-# Plot the robot's configuration
-robot.plot(q, block=True)
 
 
 
