@@ -2,6 +2,7 @@ import numpy as np
 import roboticstoolbox as rtb
 from spatialmath import SE3
 import matplotlib.pyplot as plt
+import random
 
 # Define symbolic parameters for link lengths and angles
 L0, L1, L2, L3, L4, L5 = 0.1, 0.2, 0.3, 0.3, 0.1, 0.05 
@@ -98,23 +99,27 @@ def computeLinkPoses(robot, joint_values):
 # Function to compute and print inverse kinematics solution(s) {Part 2}
 def compute_inverse_kinematics(robot, target_pose, guess_values):
     target_SE3 = SE3(target_pose) # Convert target pose to SE3 format
-    q_initial = guess_values # Initial guess for the joint values
-    solutions = robot.ikine_LM(target_SE3, q0 = q_initial, joint_limits=True) # Compute inverse kinematics
+    success = False
+    for i in range(len(guess_values)):
+        q_initial = guess_values[i] # Initial guess for the joint values
+        solutions = robot.ikine_LM(target_SE3, q0 = q_initial, joint_limits=True) # Compute inverse kinematics
 
-    roundedSol = np.round(solutions.q, 3) # round to 3 decimal places
-    
-    if solutions.success: # Check if a solution is found
-        print("Inverse kinematics solution found within joint limits:")
-        print("Theta 1: ", roundedSol[0], "d2: ", roundedSol[1], "d3: ", 
-              roundedSol[2], "Theta 4: ", roundedSol[3], "Theta 5: ", 
-              roundedSol[4], "Theta 6: ", roundedSol[5])
+        roundedSol = np.round(solutions.q, 3) # round to 3 decimal places
         
-    else:
-        print('\033[31mInverse kinematics solution within join limits not found\033[0m') # Print in red colour
-        print("Closest solution found:")
-        print("Theta 1: ", roundedSol[0], "d2: ", roundedSol[1], "d3: ", 
-              roundedSol[2], "Theta 4: ", roundedSol[3], "Theta 5: ", 
-              roundedSol[4], "Theta 6: ", roundedSol[5])
+        if solutions.success: # Check if a solution is found
+            #print('\032[Guess: ",i, "inverse kinematics solution found within joint limits:\032[0m'])
+            print('\033[32mInverse kinematics solution within join limits not found\033[0m')
+            print("Theta 1: ", roundedSol[0], "d2: ", roundedSol[1], "d3: ", 
+                roundedSol[2], "Theta 4: ", roundedSol[3], "Theta 5: ", 
+                roundedSol[4], "Theta 6: ", roundedSol[5])
+            
+        else:
+            print('\033[31mInverse kinematics solution within join limits not found\033[0m') # Print in red colour
+            print("Closest solution found:")
+            #output solution in a table
+            print("\tTheta 1: ", roundedSol[0], "\td2: ", roundedSol[1], "\td3: ", 
+                roundedSol[2], "\tTheta 4: ", roundedSol[3], "\tTheta 5: ", 
+                roundedSol[4], "\tTheta 6: ", roundedSol[5])
 
 
 
@@ -141,14 +146,21 @@ print("\nLink poses:")
 # {Part 2}
 print("\nInverse kinematics for each target:")
 # Compute inverse kinematics for the target poses
-guess_1 = [0, 0, 0, 0, 0, 0] # Initial guess for inverse kinematics
-print("Initial guess for inverse kinematics: ", guess_1)
+# Generate 5 random guesses for the joint values
+guess = []
+guesses = []
+for i in range(5):
+    for i in range(6):
+        guess.append(random.uniform(-100, 100) / 100)
+    guesses.append(guess)
+    guess = []
+
 print("\nResult for target 1:")
-compute_inverse_kinematics(robot, target_1, guess_1)
+compute_inverse_kinematics(robot, target_1, guesses)
 print("\nResult for target 2:")
-compute_inverse_kinematics(robot, target_2, guess_1)
+compute_inverse_kinematics(robot, target_2, guesses)
 print("\nResult for target 3:")
-compute_inverse_kinematics(robot, target_3, guess_1)
+compute_inverse_kinematics(robot, target_3, guesses)
 
 
 # Plot the robot
