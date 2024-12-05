@@ -1,14 +1,19 @@
+# Import the necessary libraries
 import numpy as np
 import roboticstoolbox as rtb
 from spatialmath import SE3
 import matplotlib.pyplot as plt
 import random
 
+
+# Define all variables used in the code including join variables, target poses and transformation matricies
+
 # Define symbolic parameters for link lengths and angles
 L0, L1, L2, L3, L4, L5 = 0.1, 0.2, 0.3, 0.3, 0.1, 0.05 
 alpha3 = alpha6 = np.pi/2                    
 theta1, d2, d3, theta4, theta5, theta6 = 0, 0.5, 0, 0, 0, 0  # Initial joint variables
 
+# Define target poses {Part 2}
 target_1 = [[1, 0, 0, -0.3],
             [0, -1, 0, -0.25],
             [0, 0, -1, 0.2],
@@ -25,7 +30,13 @@ target_3 = [[-0.0023, -1, 0.1, -0.257],
             [0, 0, 0, 1]]
 
 
+# Define the transformation matrix from the base to the tool in Cartesian space {Part 3}
+btT_f = np.array([[0.6791, -0.6403, 0.359, -0.4475],
+         [-0.6403, 0.2775, -0.7162, -0.335],
+         [0.359, 0.7162, 0.5985, 0.599],
+         [0, 0, 0, 1]])
 
+mass = 0.2
 
 
 # Define DH table (Alpha, d, a, Theta)
@@ -41,7 +52,7 @@ DH = [
 ]
 
 
-# Define the robot using the DH convention
+# Define the robot taking values from the DH table
 robot = rtb.DHRobot([
     rtb.RevoluteMDH(a = DH[1][2], alpha = DH[1][0], d = DH[1][1], qlim=[-np.pi, np.pi]),       # Joint 1
     rtb.PrismaticMDH(a = DH[2][2], alpha = DH[2][0], theta = DH[2][3], qlim=[0, 0.5]),   # Joint 2
@@ -51,19 +62,17 @@ robot = rtb.DHRobot([
     rtb.RevoluteMDH(a = DH[6][2], alpha = DH[6][0], d = DH[6][1], qlim=[-np.pi/2, np.pi/2]),   # Joint 6
 ], name="RPPRRR_Robot")
 
+robot.base = SE3(0, 0, L0) # Set the base of the robot
+robot.tool = SE3(0, 0, L4) # Set the tool of the robot
 
 
-# T_B0 = SE3.Trans(0, 0, L0) # Base frame
-# T_6T = SE3.Trans(0, 0, L4) # Tool frame
-
-robot.base = SE3(0, 0, L0)
-robot.tool = SE3(0, 0, L4)
-
-
-# Define example joint values (modify based on your needs)
+# Define example joint values {Part 1}
 joint_values = [theta1, d2, d3, theta4, theta5, theta6]  
 
-# Function to compute and print link poses {Part 1}
+# Compute the forward kinematics
+T = robot.base * robot.fkine(joint_values) * robot.tool
+
+# Function to compute and print link poses
 def computeLinkPoses(robot, joint_values):
     T_base = robot.base
 
@@ -104,20 +113,17 @@ def compute_inverse_kinematics(robot, target_pose, guess_values):
         q_initial = guess_values[i] # Initial guess for the joint values
         solutions = robot.ikine_LM(target_SE3, q0 = q_initial, joint_limits=True) # Compute inverse kinematics
 
-        roundedSol = np.round(solutions.q, 3) # round to 3 decimal places
+        roundedSol = np.round(np.clip(solutions.q, robot.qlim[0], robot.qlim[1]), 3) # round to 3 decimal places and clip to joint limits
         
         if solutions.success: # Check if a solution is found
-            #print('\032[Guess: ",i, "inverse kinematics solution found within joint limits:\032[0m'])
-            print('\033[32mInverse kinematics solution within join limits not found\033[0m')
-            print("Theta 1: ", roundedSol[0], "d2: ", roundedSol[1], "d3: ", 
-                roundedSol[2], "Theta 4: ", roundedSol[3], "Theta 5: ", 
-                roundedSol[4], "Theta 6: ", roundedSol[5])
+            print('\033[32mInverse kinematics solution within join limits not found for guess:\033[0m',i + 1)
+            print("\tTheta 1: ", roundedSol[0], "\td2: ", roundedSol[1], "\td3: ", 
+                roundedSol[2], "\tTheta 4: ", roundedSol[3], "\tTheta 5: ", 
+                roundedSol[4], "\tTheta 6: ", roundedSol[5])
             
         else:
-            print('\033[31mInverse kinematics solution within join limits not found\033[0m') # Print in red colour
-            print("Closest solution found:")
-            #output solution in a table
-            print("\tTheta 1: ", roundedSol[0], "\td2: ", roundedSol[1], "\td3: ", 
+            print('\033[31mInverse kinematics solution within join limits not found for guess:\033[0m',i + 1)
+            print("Closest solution found (clipped):\tTheta 1: ", roundedSol[0], "\td2: ", roundedSol[1], "\td3: ", # Print clipped solutions
                 roundedSol[2], "\tTheta 4: ", roundedSol[3], "\tTheta 5: ", 
                 roundedSol[4], "\tTheta 6: ", roundedSol[5])
 
@@ -129,6 +135,32 @@ joint_velocities = [np.radians(15), 0, 0.1, np.radians(-30), np.radians(15), np.
 
 
 
+# Compute the Jacobian in the base frame
+def jacobians(robot, joint_values_v, Trans, mass):
+    J = robot.jacob0(joint_values_v)
+    print("\nJacobian matrix in the base frame of the robot:\n", np.round(J, 3))
+
+    # Compute the end-effector velocities (linear and angular)
+    velocities = J @ joint_velocities
+    linear_velocity = velocities[:3] # Extract linear velocity
+    angular_velocity = velocities[3:] # Extract angular velocity
+    print("\nEnd-effector linear velocities  [X, Y, Z]:\n", np.round(linear_velocity, 3))
+    print("\nEnd-effector angular velocities [Wx, Wy,Wz]:\n", np.round(angular_velocity, 3))
+
+    F_ee = mass * np.array([0, 0, -9.81]) # Compute the end-effector force
+    R = Trans[:3, :3] # Extract the rotation matrix from the transformation matrix
+    F_base = R @ F_ee # Transform the end-effector force to the base frame
+    print("\nEnd-effector force in the base frame:\n", np.round(F_base, 3))
+
+    q = robot.ikine_LM(Trans).q
+    J = robot.jacob0(q)
+    print(J.T)
+    print(F_base)
+    #tau = J.T @ F_base # Compute the joint torques
+    #print("Joint torques/forces due to static load:", tau)
+
+
+
 
 # Outputs
 
@@ -136,12 +168,10 @@ print(robot)
 
 # {Part 1}
 # Compute forward kinematics
-print("\nForward kinematics:")
-T = robot.base * robot.fkine(joint_values) * robot.tool
-print(T)
+print("\nForward kinematics:\n", T)
 
 print("\nLink poses:")
-# computeLinkPoses(robot, joint_values) # Compute link poses
+computeLinkPoses(robot, joint_values) # Compute link poses
 
 # {Part 2}
 print("\nInverse kinematics for each target:")
@@ -163,6 +193,10 @@ print("\nResult for target 3:")
 compute_inverse_kinematics(robot, target_3, guesses)
 
 
+# Jacobians, Velocity and Static Force Analysis {Part 3} 
+jacobians(robot, joint_values_v, btT_f, mass) 
+
+
 # Plot the robot
-# robot.plot(joint_values, block=True)
-# plt.show()
+robot.plot(joint_values, block=True)
+plt.show()
