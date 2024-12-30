@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 
 # Define all variables used in the code including join variables, target poses and transformation matricies
 
+g = 9.81 # Gravity constant
+
 # Define symbolic parameters for link lengths and angles
 L0, L1, L2, L3, L4, L5 = 0.1, 0.2, 0.3, 0.3, 0.1, 0.05 
 alpha3 = alpha6 = np.pi/2                    
@@ -51,8 +53,12 @@ btT_f = np.array([[0.6791, -0.6403, 0.359, -0.4475],
          [0.359, 0.7162, 0.5985, 0.599],
          [0, 0, 0, 1]])
 
+# Define joint values and velocities
+joint_values_v = [np.radians(-60), 0.4, 0.1, np.radians(90), np.radians(180), np.radians(90)] 
+joint_velocities = [np.radians(15), 0, 0.1, np.radians(-30), np.radians(15), np.radians(10)]
+
 mass = 0.2 # Define mass and gravity constants
-g = 9.81 # Gravity constant
+
 
 
 # {Part 4}
@@ -84,7 +90,7 @@ inertias = [
 
 load = 0.2 # Define the load on the end-effector
 
-theta_d = np.array([np.pi/4, 0.5, 0.09, np.pi/2, np.pi/4, np.pi/2]) # Define the desired joint angles and velocities
+theta_d = np.array([np.pi/4, 0.5, 0.09, np.pi/2, np.pi/4, np.pi/2]) # Define the robot pose when button is pressed
 
 theta_dot_d = np.array([np.deg2rad(-35), 0.1, -0.01, np.deg2rad(-60), np.deg2rad(50), np.deg2rad(40)]) # Define the joint velocities for the moving robot
 
@@ -164,13 +170,7 @@ def compute_inverse_kinematics(robot, target_pose, guess_values):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-# Define joint values and velocities {Part 3}
-joint_values_v = [np.radians(-60), 0.4, 0.1, np.radians(90), np.radians(180), np.radians(90)]
-joint_velocities = [np.radians(15), 0, 0.1, np.radians(-30), np.radians(15), np.radians(10)]
-
-
-
-# Compute the Jacobian in the base frame
+# Compute the Jacobian in the base frame {Part 3}
 def jacobians(robot, pose, mass, g):
     J = robot.jacob0(joint_values_v) # Calculate the jacobian matrix relative to the robot base
     print("Jacobian matrix in the base frame of the robot:\n", np.round(J, 3))
@@ -179,14 +179,13 @@ def jacobians(robot, pose, mass, g):
     velocities = J @ joint_velocities # matricies multiplied to find velocities
     linear_velocity = velocities[:3] # Extract linear velocity
     angular_velocity = velocities[3:] # Extract angular velocity
-    print("\nEnd-effector linear velocities  [X, Y, Z]:\n", np.round(linear_velocity, 3))
-    print("\nEnd-effector angular velocities [Wx, Wy,Wz]:\n", np.round(angular_velocity, 3))
+    print("\nEnd-effector linear velocities  [X, Y, Z]:\n", np.round(linear_velocity, 3),"M/s")
+    print("\nEnd-effector angular velocities [Wx, Wy,Wz]:\n", np.round(angular_velocity, 3),"rad/s")
 
     J = robot.jacob0(robot.ikine_LM(pose).q) # find the inverse kinematics of the static pose, then find the jacobian matrix
     F_ee = mass * np.array([0, 0, -g, 0, 0, 0]) # Compute the end-effector force
     tau = J.T @ F_ee # Compute the joint torques
     print("Joint torques/forces due to static load:", np.round(tau, 3), "Nm/N") # Output the joint torques/forces
-
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -202,16 +201,16 @@ def emergencyStop(robot, theta_d, theta_dot_d, max_torque, load, g, CoMs, linkMa
         link.I = inertias[i] # Set the inertia tensors of the link
 
     robot.payload(load) # Set the load on the end-effector
-
+ 
     theta_ddot = robot.accel(theta_d, theta_dot_d, -max_torque, mass_vector) # Compute the max joint accelerations
 
     tau = robot.rne(q = theta_d, qd = theta_dot_d, qdd = theta_ddot) # Compute the joint torques
 
     for i, torque in enumerate(tau):
         if i == 1 or i == 2:
-            print("Joint ", i, " torque: ", np.round(torque, 3),"Nm") # Output the joint torques
+            print("Joint ", i, " force: ", np.round(torque, 3),"N") # Output the joint torques
         else:
-            print("Joint ", i, " force: ", np.round(torque, 3),"N") # Output the joint forces
+            print("Joint ", i, " torque: ", np.round(torque, 3),"Nm") # Output the joint forces
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -235,7 +234,7 @@ computeLinkPoses(robot, joint_values) # Compute link poses
 print("\033[38;2;255;141;3m{Part 2}\033[0m")
 print("Inverse kinematics for each target:")
 # Compute inverse kinematics for the target poses
-# Generate 5 random guesses for the joint values
+# Generate 10 random guesses for the joint values
 guess = []
 guesses = []
 for i in range(10):
@@ -256,7 +255,7 @@ compute_inverse_kinematics(robot, target_3, guesses)
 print("\033[38;2;255;141;3m\n{Part 3}\033[0m")
 jacobians(robot, btT_f, mass, g) 
 
-# {Part 4}
+# Emergency Stop {Part 4}
 print("\033[38;2;255;141;3m\n{Part 4}\033[0m")
 emergencyStop(robot, theta_d, theta_dot_d, max_torque, load, g, CoMs, linkMasses, inertias) # Compute the emergency stop torques
 
